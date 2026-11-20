@@ -26,6 +26,7 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
+          build-warnings: warn
           cache: true
 
       - name: formatting
