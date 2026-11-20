@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: formatting
+        run: cargo fmt --all -- --check
+        continue-on-error: true
+
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: tests
+        run: cargo test --all-features
+
+      - name: check
+        run: cargo check

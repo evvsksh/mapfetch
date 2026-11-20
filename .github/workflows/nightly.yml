@@ -1,0 +1,43 @@
+name: nightly
+
+"on":
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    build:
+        if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+        runs-on: windows-latest
+
+        steps:
+            - name: checkout
+              uses: actions/checkout@v6
+
+            - name: setup rust
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: rust cache
+              uses: Swatinem/rust-cache@v2
+
+            - name: build
+              run: cargo build --release --target x86_64-pc-windows-msvc
+
+            - name: upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: mapfetch-nightly-windows-x64
+                  path: target/x86_64-pc-windows-msvc/release/mapfetch.exe
+                  if-no-files-found: error
+                  compression-level: 9
+                  retention-days: 14
