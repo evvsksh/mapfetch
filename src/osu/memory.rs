@@ -1,4 +1,5 @@
 pub mod regions;
+pub mod scanner;
 
 use anyhow::{Context, Result, bail};
 use std::{ffi::c_void, io};
@@ -15,7 +16,6 @@ pub struct MemoryReader {
     pid: u32,
 }
 
-#[allow(dead_code)]
 impl MemoryReader {
     pub fn attach(pid: u32) -> Result<Self> {
         // open the process with read-only permissions
@@ -62,28 +62,10 @@ impl MemoryReader {
         Ok(())
     }
 
-    pub fn read_u8(&self, address: u32) -> Result<u8> {
-        let mut buffer = [0u8; 1];
-        self.read_exact(address, &mut buffer)?;
-        Ok(buffer[0])
-    }
-
     pub fn read_u32(&self, address: u32) -> Result<u32> {
         let mut buffer = [0u8; 4];
         self.read_exact(address, &mut buffer)?;
         Ok(u32::from_le_bytes(buffer))
-    }
-
-    pub fn read_i32(&self, address: u32) -> Result<i32> {
-        let mut buffer = [0u8; 4];
-        self.read_exact(address, &mut buffer)?;
-        Ok(i32::from_le_bytes(buffer))
-    }
-
-    pub fn read_f32(&self, address: u32) -> Result<f32> {
-        let mut buffer = [0u8; 4];
-        self.read_exact(address, &mut buffer)?;
-        Ok(f32::from_le_bytes(buffer))
     }
 
     pub(super) fn handle(&self) -> HANDLE {
