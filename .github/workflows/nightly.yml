@@ -1,12 +1,13 @@
 name: nightly
 
-"on":
+on:
     push:
         branches:
             - main
 
 permissions:
-    contents: read
+    contents: write
+    actions: write
 
 concurrency:
     group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +19,15 @@ env:
 jobs:
     build:
         if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
-        runs-on: windows-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - os: windows-latest
+                      target: x86_64-pc-windows-msvc
+                      binary: mapfetch.exe
+
+        runs-on: ${{ matrix.os }}
 
         steps:
             - name: checkout
@@ -27,19 +36,51 @@ jobs:
             - name: setup rust
               uses: actions-rust-lang/setup-rust-toolchain@v2
               with:
-                toolchain: stable
-                components: rustfmt, clippy
-                build-warnings: warn
-                cache: true
+                  toolchain: stable
+                  components: rustfmt, clippy
+                  build-warnings: warn
+                  cache: true
 
             - name: build
-              run: cargo build --release --target x86_64-pc-windows-msvc
+              run: cargo build --release --target ${{ matrix.target }}
 
             - name: upload artifact
               uses: actions/upload-artifact@v7
               with:
-                  name: mapfetch-nightly-windows-x64
-                  path: target/x86_64-pc-windows-msvc/release/mapfetch.exe
+                  name: mapfetch-${{ matrix.target }}
+                  path: target/${{ matrix.target }}/release/${{ matrix.binary }}
                   if-no-files-found: error
                   compression-level: 9
                   retention-days: 14
+
+    release:
+        needs: build
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: download artifacts
+              uses: actions/download-artifact@v7
+              with:
+                  pattern: mapfetch-*
+                  path: dist
+                  merge-multiple: true
+
+            - name: publish nightly release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: nightly
+                  name: Nightly
+                  body: |
+                      > [!NOTE]
+                      > This release contains the latest unstable nightly builds. GitHub automatically generates source archives, so refer to the [main branch](https://github.com/evvsksh/mapfetch/tree/main) for the latest source code.
+                  files: dist/*
+                  prerelease: true
+                  make_latest: false
+                  overwrite_files: true
+                  fail_on_unmatched_files: true
+
+            - name: delete temporary artifacts
+              uses: actions/delete-artifact@v5
+              with:
+                  pattern: mapfetch-*
+                  fail-on-error: false
