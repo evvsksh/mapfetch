@@ -65,6 +65,7 @@ dependencies = [
  "sysinfo",
  "tracing",
  "tracing-subscriber",
+ "windows-sys",
 ]
 
 [[package]]
